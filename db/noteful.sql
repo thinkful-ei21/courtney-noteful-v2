@@ -18,8 +18,6 @@ INSERT INTO folders (name) VALUES
 SELECT * FROM folders;
 
 
-
-
 CREATE TABLE notes (
 	id serial PRIMARY KEY,
 	title text NOT NULL,
@@ -27,6 +25,13 @@ CREATE TABLE notes (
 	created timestamp DEFAULT now(),
 	folder_id int REFERENCES folders(id) ON DELETE SET NULL
 );
+
+
+-- CREATE TABLE notes_tags (
+-- 	note_id INTEGER NOT NULL REFERENCES notes ON DELETE CASCADE,
+-- 	tag_id INTEGER NOT NULL REFERENCES tags ON DELETE CASCADE
+-- );
+
 
 ALTER SEQUENCE notes_id_seq RESTART WITH 1000;
 
@@ -81,10 +86,12 @@ INSERT INTO notes (title, content, folder_id) VALUES
 -- FROM notes LEFT JOIN folders 
 -- ON notes.folder_id = folders.id;
 
-SELECT *
-FROM notes LEFT JOIN folders 
-ON notes.folder_id = folders.id
-WHERE notes.id = 1005;
+-- SELECT *
+-- FROM notes LEFT JOIN folders 
+-- ON notes.folder_id = folders.id
+-- WHERE notes.id = 1005;
+
+
 
 
 
