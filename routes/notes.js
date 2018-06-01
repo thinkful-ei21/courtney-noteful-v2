@@ -17,13 +17,15 @@ router.get('/', (req, res, next) => {
   const { searchTerm } = req.query;
   
   //notes.filter(id)...
-  knex.select('notes.id', 'title', 'content')
+  knex.select('notes.id', 'title', 'content', 'folders.id as folderId', 'folders.name as folderName')
     .from('notes')
+    .leftJoin('folders', 'notes.folder_id', 'folders.id')
     .modify(queryBuilder => {
       if (searchTerm) {
         queryBuilder.where('title', 'like', `%${searchTerm}%`);
       }
     })
+    // .modify()
     .orderBy('notes.id')
     .then(list => {
       res.json(list);
@@ -40,8 +42,9 @@ router.get('/:id', (req, res, next) => {
 
   //notes.find(id)
   knex('notes')
-    .first('id', 'content', 'title')
-    .where('id', `${id}`)
+    .first('notes.id', 'content', 'title', 'folders.id as folderId', 'folders.name as folderName')
+    .leftJoin('folders', 'notes.folder_id', 'folders.id')
+    .where('notes.id', id)
     .then(item => {
       if (item) {
         res.json(item);
@@ -75,15 +78,20 @@ router.put('/:id', (req, res, next) => {
     return next(err);
   }
 
-  // notes.update(id, updateObj)
   knex('notes')
-    // .returning(['title', 'content'])
-    .select('id')
-    .where('id', `${id}`)
     .update(updateObj)
-      .then(item => {
-        if (item) {
-          res.json(item[0]);
+    .where('id', id)
+    .returning(['id'])
+
+      .then(() => {
+        return knex('notes')
+          .select('notes.id', 'title', 'content', 'folder_id as folderId', 'folders.name as folderName')
+          .leftJoin('folders', 'notes.folder_id', 'folders.id')
+          .where('notes.id', id)
+      })
+      .then(([result]) => {
+        if (result) {
+          res.json(result);
         } else {
           next();
         }
@@ -95,24 +103,33 @@ router.put('/:id', (req, res, next) => {
 
 // Post (insert) an item
 router.post('/', (req, res, next) => {
-  const { title, content } = req.body;
+  const { title, content, folderId } = req.body;
 
-  const newItem = { title, content };
   /***** Never trust users - validate input *****/
-  if (!newItem.title) {
+  if (!title) {
     const err = new Error('Missing `title` in request body');
     err.status = 400;
     return next(err);
   }
 
+  const newItem = {
+   title: title, 
+   content: content, 
+   folder_id: (folderId) ? folderId : null 
+  };
+
   // notes.create(newItem)
   knex('notes')
-    // .returning(['id', 'title', 'content'])
     .insert(newItem)
-    .then(item => {
-      if (item) {
-        res.location(`http://${req.headers.host}/notes/${item.id}`).status(201).json(item[0]);
-      }
+    .returning('id')
+    .then(([id]) => {
+      return knex('notes')
+        .select('notes.id', 'title', 'content', 'folder_id as folderId', 'folders.name as folderName')
+        .leftJoin('folders', 'notes.folder_id', 'folders.id')
+        .where('notes.id', id);
+    })
+    .then(result => {
+      res.location(`${req.originalUrl}/${result[0].id}`).status(201).json(result);
     })
     .catch(err => {
       next(err);
@@ -136,3 +153,7 @@ router.delete('/:id', (req, res, next) => {
 });
 
 module.exports = router;
+
+
+
+
