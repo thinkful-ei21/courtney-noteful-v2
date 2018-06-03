@@ -22,6 +22,7 @@ CREATE TABLE notes (
 
 ALTER SEQUENCE notes_id_seq RESTART WITH 1000;
 
+ALTER TABLE notes ADD COLUMN folder_id int REFERENCES folders(id) ON DELETE SET NULL;
 
 CREATE TABLE tags (
 	id serial PRIMARY KEY,
